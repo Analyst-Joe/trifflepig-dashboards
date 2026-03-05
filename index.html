@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coordinator Capacity Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: #f0f2f6; color: #262730;
+    font-size: 13px; height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e6e9ef;
+    padding: 0 24px; height: 52px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; z-index: 10;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .topbar-title {
+    font-size: 15px; font-weight: 700; color: #262730;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tp-dot { width: 10px; height: 10px; border-radius: 50%; background: #e91e8c; }
+
+  .filter-pills { display: flex; gap: 6px; }
+  .pill {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid #e6e9ef; background: #f8f9fa;
+    color: #8a8e9b; transition: all 0.12s; user-select: none;
+  }
+  .pill:hover { border-color: #d0d4dc; color: #555; }
+  .pill.active { background: #262730; color: #fff; border-color: #262730; }
+  .pill.red.active    { background: #ff4b4b; border-color: #ff4b4b; }
+  .pill.amber.active  { background: #ffa421; border-color: #ffa421; }
+  .pill.green.active  { background: #09ab3b; border-color: #09ab3b; }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .week-label { font-size: 11px; color: #8a8e9b; }
+  .settings-btn {
+    width: 30px; height: 30px; border-radius: 6px;
+    border: 1px solid #e6e9ef; background: #f8f9fa;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #8a8e9b; transition: all 0.12s;
+  }
+  .settings-btn:hover { background: #fff; border-color: #d0d4dc; color: #555; }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex; flex: 1; overflow: hidden;
+  }
+
+  /* ── LIST PANEL ── */
+  .list-panel {
+    width: 680px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden; background: #fff;
+    border-right: 1px solid #e6e9ef;
+    transition: width 0.25s ease;
+  }
+  .list-panel.narrow { width: 560px; }
+
+  .list-header {
+    padding: 10px 20px 8px;
+    border-bottom: 1px solid #f0f2f6;
+    display: grid;
+    grid-template-columns: 180px 60px 60px 60px 60px 70px 60px 60px;
+    gap: 4px; align-items: center;
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em; color: #bbb;
+    flex-shrink: 0;
+  }
+
+  .list-body { overflow-y: auto; flex: 1; }
+
+  /* GROUP HEADER */
+  .group-header {
+    padding: 6px 20px 4px;
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    background: #f8f9fa; border-bottom: 1px solid #f0f2f6;
+    border-top: 1px solid #f0f2f6;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .group-header.red   { color: #ff4b4b; }
+  .group-header.amber { color: #ffa421; }
+  .group-header.green { color: #09ab3b; }
+  .group-count {
+    font-size: 9px; padding: 1px 6px;
+    border-radius: 10px; font-weight: 700;
+  }
+  .red   .group-count { background: #fff0f0; color: #ff4b4b; }
+  .amber .group-count { background: #fff8ee; color: #ffa421; }
+  .green .group-count { background: #f0fff4; color: #09ab3b; }
+
+  /* COORDINATOR ROW */
+  .coord-row {
+    display: grid;
+    grid-template-columns: 180px 60px 60px 60px 60px 70px 60px 60px;
+    gap: 4px; align-items: center;
+    padding: 9px 20px;
+    border-bottom: 1px solid #f8f9fa;
+    cursor: pointer; transition: background 0.1s;
+    position: relative;
+  }
+  .coord-row:hover { background: #fafbfc; }
+  .coord-row.selected { background: #f0f2f6; }
+  .coord-row.selected::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 3px; background: #e91e8c;
+  }
+  .coord-row.hidden { display: none; }
+
+  .row-name { display: flex; align-items: center; gap: 7px; }
+  .row-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .row-name-text { font-weight: 600; font-size: 12px; color: #262730; }
+  .row-modifier {
+    font-size: 8px; padding: 1px 4px; border-radius: 3px;
+    font-weight: 700; margin-left: 2px;
+  }
+  .mod-planning  { background: #eef6ff; color: #4c9be8; }
+  .mod-delivery  { background: #fff0f8; color: #e91e8c; }
+
+  .row-now { font-size: 17px; font-weight: 700; text-align: center; }
+  .row-now.red   { color: #ff4b4b; }
+  .row-now.amber { color: #ffa421; }
+  .row-now.green { color: #09ab3b; }
+
+  .row-plan  { font-size: 13px; font-weight: 600; color: #4c9be8; text-align: center; }
+  .row-conf  { font-size: 13px; font-weight: 600; color: #0068c9; text-align: center; }
+  .row-deliv { font-size: 13px; font-weight: 600; color: #e91e8c; text-align: center; }
+  .row-cfmd  { font-size: 13px; font-weight: 400; color: #8a8e9b; text-align: center; }
+
+  .row-flags { display: flex; gap: 3px; justify-content: flex-start; align-items: center; }
+  .row-flag {
+    font-size: 9px; padding: 1px 5px; border-radius: 3px;
+    font-weight: 700; white-space: nowrap;
+  }
+  .rf-ds { background: #fff8ee; color: #ffa421; border: 1px solid #ffd580; }
+  .rf-st { background: #fff0f0; color: #ff4b4b; border: 1px solid #fecaca; }
+  .row-inc { font-size: 13px; font-weight: 600; color: #83c9ff; text-align: center; }
+
+  .zero { color: #d0d4dc !important; font-weight: 400 !important; }
+
+  /* ── SIDE PANEL ── */
+  .side-panel {
+    flex: 1; overflow-y: auto;
+    background: #f0f2f6;
+    display: flex; flex-direction: column;
+    transition: opacity 0.2s;
+  }
+  .side-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px; color: #bbb;
+  }
+  .side-empty-icon { font-size: 32px; }
+  .side-empty-text { font-size: 12px; }
+
+  .side-content { padding: 20px; display: none; flex-direction: column; gap: 0; }
+  .side-content.visible { display: flex; }
+
+  /* ── CARD (inside side panel) ── */
+  .coord-card {
+    background: #fff; border: 1px solid #e6e9ef;
+    border-radius: 10px; border-left: 5px solid #e6e9ef;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .coord-card.red   { border-left-color: #ff4b4b; }
+  .coord-card.amber { border-left-color: #ffa421; }
+  .coord-card.green { border-left-color: #09ab3b; }
+
+  .card-header {
+    padding: 14px 16px 12px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 1px solid #f0f2f6;
+  }
+  .card-left { flex: 1; }
+  .card-name {
+    font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 7px; margin-bottom: 6px;
+  }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .planner-section { display: flex; flex-direction: column; gap: 4px; }
+  .planner-row-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: #bbb;
+  }
+  .planner-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+  .planner-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: #f8f9fa; border: 1px solid #e6e9ef;
+    border-radius: 4px; padding: 2px 6px; font-size: 11px;
+  }
+  .p-name   { font-weight: 600; color: #262730; }
+  .p-actual { color: #4c9be8; font-weight: 700; }
+  .p-sep    { color: #bbb; }
+  .p-proj   { color: #8a8e9b; }
+  .planner-chip.stepin { background: #fef9fe; border-color: #e91e8c; }
+  .planner-chip.stepin .p-name   { color: #e91e8c; }
+  .planner-chip.stepin .p-actual { color: #e91e8c; }
+
+  .card-right { text-align: right; padding-left: 10px; flex-shrink: 0; }
+  .total-num   { font-size: 30px; font-weight: 700; line-height: 1; }
+  .total-label { font-size: 10px; color: #8a8e9b; }
+
+  .card-body { padding: 12px 16px; }
+  .section-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #bbb; }
+  .section-desc  { font-size: 9px; color: #d0d4dc; }
+
+  .now-cols { display: flex; gap: 0; margin-bottom: 10px; }
+  .now-col  {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; padding: 0 6px; position: relative;
+  }
+  .now-col:first-child { padding-left: 0; }
+  .now-col:last-child  { padding-right: 0; }
+  .now-col + .now-col::before {
+    content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 1px; background: #f0f2f6;
+  }
+  .now-col-label { font-size: 9px; color: #8a8e9b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .now-val {
+    font-size: 26px; font-weight: 700; line-height: 1;
+    cursor: pointer; border-radius: 5px; padding: 2px 5px; margin: -2px -5px;
+    transition: background 0.12s;
+  }
+  .now-val:hover:not(.zero) { background: #f4f5f7; }
+  .now-val.zero { color: #d0d4dc; font-weight: 400; cursor: default; }
+  .now-val.planning   { color: #4c9be8; }
+  .now-val.confirming { color: #0068c9; }
+  .now-val.delivery   { color: #e91e8c; }
+  .now-col-sub { font-size: 8px; color: #bbb; text-align: center; margin-top: 3px; line-height: 1.4; }
+
+  .confirmed-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f8f9fa; border: 1px solid #e6e9ef;
+    border-radius: 6px; padding: 6px 12px; margin-bottom: 8px;
+  }
+  .confirmed-left { display: flex; flex-direction: column; gap: 1px; }
+  .confirmed-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #bbb; }
+  .confirmed-sub   { font-size: 9px; color: #bbb; }
+  .confirmed-val {
+    font-size: 24px; font-weight: 700; color: #8a8e9b;
+    cursor: pointer; border-radius: 5px; padding: 2px 5px; margin: -2px -5px;
+    transition: background 0.12s;
+  }
+  .confirmed-val:hover:not(.zero) { background: #eef0f4; }
+  .confirmed-val.zero { color: #d0d4dc; font-weight: 400; cursor: default; }
+
+  .flags-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .flag-chip {
+    flex: 1; display: flex; align-items: center; justify-content: space-between;
+    border-radius: 6px; padding: 6px 10px; border: 1px solid;
+    cursor: pointer; transition: opacity 0.12s;
+  }
+  .flag-chip.zero-flag { cursor: default; opacity: 0.45; }
+  .flag-chip:hover:not(.zero-flag) { opacity: 0.82; }
+  .flag-chip.del-soon { background: #fff8ee; border-color: #ffd580; }
+  .flag-chip.stalled  { background: #fff0f0; border-color: #fecaca; }
+  .flag-chip.del-soon.hot { background: #fff3cd; border-color: #ffa421; }
+  .flag-chip.stalled.hot  { background: #ffe8e8; border-color: #ff4b4b; }
+  .flag-left { display: flex; flex-direction: column; gap: 1px; }
+  .flag-name { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .flag-chip.del-soon .flag-name { color: #ffa421; }
+  .flag-chip.stalled  .flag-name { color: #ff4b4b; }
+  .flag-sub { font-size: 9px; color: #8a8e9b; }
+  .flag-val { font-size: 22px; font-weight: 700; line-height: 1; }
+  .flag-chip.del-soon .flag-val { color: #ffa421; }
+  .flag-chip.stalled  .flag-val { color: #ff4b4b; }
+  .flag-chip.zero-flag .flag-val { color: #d0d4dc; }
+
+  .modifier-flag {
+    display: none; align-items: center; gap: 6px;
+    border-radius: 5px; padding: 5px 10px; margin-bottom: 8px;
+    font-size: 10px; font-weight: 600;
+    background: #fff8ee; border: 1px solid #ffa421; color: #cc7a00;
+  }
+  .modifier-flag.show { display: flex; }
+  .double-flag {
+    display: none; align-items: center; gap: 6px;
+    border-radius: 5px; padding: 5px 10px; margin-bottom: 8px;
+    font-size: 10px; font-weight: 600;
+    background: #ffe8e8; border: 1px solid #ff4b4b; color: #ff4b4b;
+  }
+  .double-flag.show { display: flex; }
+
+  .incoming-row {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid #f0f2f6; padding-top: 8px; margin-bottom: 8px;
+  }
+  .incoming-left { display: flex; flex-direction: column; gap: 1px; }
+  .incoming-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #bbb; }
+  .incoming-sub   { font-size: 9px; color: #bbb; }
+  .incoming-val {
+    font-size: 24px; font-weight: 700; color: #83c9ff;
+    cursor: pointer; border-radius: 5px; padding: 2px 5px; margin: -2px -5px;
+    transition: background 0.12s;
+  }
+  .incoming-val:hover:not(.zero) { background: #f0f8ff; }
+  .incoming-val.zero { color: #d0d4dc; font-weight: 400; cursor: default; }
+
+  .stack-wrap { border-top: 1px solid #f0f2f6; padding-top: 8px; margin-bottom: 8px; }
+  .stack-bar  { display: flex; height: 5px; border-radius: 3px; overflow: hidden; background: #f0f2f6; margin-bottom: 5px; }
+  .stack-seg  { height: 100%; }
+  .stack-legend { display: flex; gap: 8px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 3px; font-size: 9px; color: #8a8e9b; }
+  .leg-dot  { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+
+  .spark-wrap { border-top: 1px solid #f0f2f6; padding-top: 8px; }
+  .spark-row  { display: flex; align-items: center; gap: 8px; }
+  .spark-lbl  { font-size: 9px; color: #8a8e9b; text-transform: uppercase; flex-shrink: 0; width: 26px; }
+  .sparkline  { flex: 1; height: 20px; display: flex; align-items: flex-end; gap: 2px; }
+  .sp { flex: 1; border-radius: 1px 1px 0 0; min-height: 2px; }
+  .sp.now { outline: 1.5px solid #e91e8c; outline-offset: 1px; }
+  .spark-now-lbl { font-size: 9px; color: #e91e8c; flex-shrink: 0; }
+
+  /* TRIP LIST */
+  .trip-list { border-top: 1px solid #f0f2f6; overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
+  .trip-list.open { max-height: 500px; overflow-y: auto; }
+  .tl-header { padding: 8px 16px 5px; display: flex; justify-content: space-between; align-items: center; }
+  .tl-title  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+  .tl-close  { font-size: 11px; color: #8a8e9b; cursor: pointer; padding: 2px 6px; border-radius: 3px; }
+  .tl-close:hover { background: #f0f2f6; }
+  .tl-cols { display: grid; padding: 0 16px 3px; border-bottom: 1px solid #f0f2f6; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #bbb; }
+  .g4  { grid-template-columns: 1fr 90px 46px 58px; }
+  .g3  { grid-template-columns: 1fr 100px 58px; }
+  .g3p { grid-template-columns: 1fr 110px 68px; }
+  .g4d { grid-template-columns: 1fr 70px 50px 58px; }
+  .tl-row { display: grid; padding: 5px 16px; border-bottom: 1px solid #f8f9fa; align-items: center; font-size: 11px; }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-row:hover { background: #fafbfc; }
+  .tn { color: #262730; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ts { color: #8a8e9b; font-size: 10px; }
+  .td { color: #555; }
+  .td.over { color: #ff4b4b; font-weight: 700; }
+  .tv { color: #8a8e9b; font-size: 10px; }
+  .tp-roster { color: #8a8e9b; font-size: 10px; }
+  .tp-stepin { color: #e91e8c; font-size: 10px; font-weight: 600; }
+  .fbadge { display: inline-block; font-size: 8px; padding: 1px 3px; border-radius: 3px; font-weight: 700; margin-left: 2px; vertical-align: middle; }
+  .fb-ds { background: #fff8ee; color: #ffa421; border: 1px solid #ffd580; }
+  .fb-st { background: #fff0f0; color: #ff4b4b; border: 1px solid #fecaca; }
+  .tl-note { padding: 4px 16px 8px; font-size: 10px; color: #8a8e9b; font-style: italic; }
+
+  /* SETTINGS OVERLAY */
+  .settings-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3); z-index: 100;
+    align-items: flex-start; justify-content: flex-end;
+    padding: 60px 20px 0 0;
+  }
+  .settings-overlay.show { display: flex; }
+  .settings-panel {
+    background: #fff; border: 1px solid #e6e9ef;
+    border-radius: 10px; padding: 20px;
+    width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .settings-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #8a8e9b; margin-bottom: 14px;
+  }
+  .settings-section-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: #8a8e9b; margin-bottom: 8px; margin-top: 4px;
+  }
+  .thresh-grid { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .thresh-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #f8f9fa; border: 1px solid #e6e9ef;
+    border-radius: 6px; padding: 8px 12px;
+  }
+  .thresh-label { flex: 1; font-size: 11px; color: #555; }
+  .thresh-label strong { color: #262730; display: block; font-size: 12px; margin-bottom: 1px; }
+  .thresh-input {
+    width: 52px; padding: 4px 8px; border: 1px solid #d0d4dc;
+    border-radius: 4px; font-size: 12px; font-weight: 700;
+    text-align: center; font-family: monospace; color: #ff4b4b;
+    background: #fff;
+  }
+  .thresh-input:focus { outline: none; border-color: #e91e8c; }
+  .settings-close {
+    width: 100%; margin-top: 14px; padding: 8px;
+    background: #262730; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .settings-close:hover { background: #3a3d47; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">
+      <span class="tp-dot"></span>
+      Coordinator Capacity
+    </div>
+    <div class="filter-pills">
+      <div class="pill active" data-filter="all" onclick="setFilter('all',this)">All 15</div>
+      <div class="pill red" data-filter="red" onclick="setFilter('red',this)">🔴 At Capacity</div>
+      <div class="pill amber" data-filter="amber" onclick="setFilter('amber',this)">🟡 Watch</div>
+      <div class="pill green" data-filter="green" onclick="setFilter('green',this)">🟢 OK</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="week-label">w/e 23 Feb 2026</span>
+    <div class="settings-btn" onclick="toggleSettings()" title="Thresholds">⚙</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LIST PANEL -->
+  <div class="list-panel" id="listPanel">
+    <div class="list-header">
+      <span>Coordinator</span>
+      <span style="text-align:center">Now</span>
+      <span style="text-align:center">Plan</span>
+      <span style="text-align:center">Conf-ing</span>
+      <span style="text-align:center">Deliv</span>
+      <span>Flags</span>
+      <span style="text-align:center">Conf-ed</span>
+      <span style="text-align:center">Incoming</span>
+    </div>
+    <div class="list-body" id="listBody">
+
+      <!-- AT CAPACITY -->
+      <div class="group-header red" data-group="red">🔴 At Capacity <span class="group-count">6</span></div>
+
+      <div class="coord-row" data-status="red" data-id="katrina" onclick="selectCoord('katrina',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ff4b4b"></span><span class="row-name-text">Katrina Lee</span><span class="row-modifier mod-planning">P≥8</span></div>
+        <div class="row-now red">24</div>
+        <div class="row-plan">10</div>
+        <div class="row-conf">14</div>
+        <div class="row-deliv zero">0</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd zero">0</div>
+        <div class="row-inc zero">0</div>
+      </div>
+
+      <div class="coord-row" data-status="red" data-id="partow" onclick="selectCoord('partow',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ff4b4b"></span><span class="row-name-text">Partow Etemadi</span></div>
+        <div class="row-now red">22</div>
+        <div class="row-plan">5</div>
+        <div class="row-conf">11</div>
+        <div class="row-deliv">6</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 3</span></div>
+        <div class="row-cfmd">4</div>
+        <div class="row-inc">11</div>
+      </div>
+
+      <div class="coord-row" data-status="red" data-id="evan" onclick="selectCoord('evan',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ff4b4b"></span><span class="row-name-text">Evan LaRocque</span><span class="row-modifier mod-planning">P≥8</span></div>
+        <div class="row-now red">22</div>
+        <div class="row-plan">8</div>
+        <div class="row-conf">12</div>
+        <div class="row-deliv">2</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 2</span></div>
+        <div class="row-cfmd">4</div>
+        <div class="row-inc">9</div>
+      </div>
+
+      <div class="coord-row" data-status="red" data-id="lucia" onclick="selectCoord('lucia',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ff4b4b"></span><span class="row-name-text">Lucia Duarte</span><span class="row-modifier mod-delivery">D≥8</span></div>
+        <div class="row-now red">19</div>
+        <div class="row-plan">5</div>
+        <div class="row-conf">4</div>
+        <div class="row-deliv">10</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 4</span></div>
+        <div class="row-cfmd">3</div>
+        <div class="row-inc">7</div>
+      </div>
+
+      <div class="coord-row" data-status="red" data-id="madie" onclick="selectCoord('madie',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ff4b4b"></span><span class="row-name-text">Madeleine Agapito</span><span class="row-modifier mod-delivery">D≥8</span></div>
+        <div class="row-now red">18</div>
+        <div class="row-plan">3</div>
+        <div class="row-conf">3</div>
+        <div class="row-deliv">12</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 5</span></div>
+        <div class="row-cfmd">7</div>
+        <div class="row-inc">3</div>
+      </div>
+
+      <div class="coord-row" data-status="red" data-id="juliet" onclick="selectCoord('juliet',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ff4b4b"></span><span class="row-name-text">Juliet Cameron</span></div>
+        <div class="row-now red">16</div>
+        <div class="row-plan">5</div>
+        <div class="row-conf">10</div>
+        <div class="row-deliv">1</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 1</span></div>
+        <div class="row-cfmd">4</div>
+        <div class="row-inc">6</div>
+      </div>
+
+      <!-- WATCH -->
+      <div class="group-header amber" data-group="amber">🟡 Watch <span class="group-count">2</span></div>
+
+      <div class="coord-row" data-status="amber" data-id="jocelyn" onclick="selectCoord('jocelyn',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ffa421"></span><span class="row-name-text">Jocelyn Faulkner</span></div>
+        <div class="row-now amber">15</div>
+        <div class="row-plan">5</div>
+        <div class="row-conf">4</div>
+        <div class="row-deliv">6</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 3</span></div>
+        <div class="row-cfmd">21</div>
+        <div class="row-inc">1</div>
+      </div>
+
+      <div class="coord-row" data-status="amber" data-id="manroop" onclick="selectCoord('manroop',this)">
+        <div class="row-name"><span class="row-dot" style="background:#ffa421"></span><span class="row-name-text">Manroop Sidhu</span></div>
+        <div class="row-now amber">12</div>
+        <div class="row-plan">2</div>
+        <div class="row-conf">7</div>
+        <div class="row-deliv">3</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 2</span></div>
+        <div class="row-cfmd zero">0</div>
+        <div class="row-inc">7</div>
+      </div>
+
+      <!-- OK -->
+      <div class="group-header green" data-group="green">🟢 OK <span class="group-count">7</span></div>
+
+      <div class="coord-row" data-status="green" data-id="sydney" onclick="selectCoord('sydney',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Sydney Preston</span></div>
+        <div class="row-now green">10</div>
+        <div class="row-plan">4</div>
+        <div class="row-conf">6</div>
+        <div class="row-deliv zero">0</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd">2</div>
+        <div class="row-inc">3</div>
+      </div>
+
+      <div class="coord-row" data-status="green" data-id="alexa" onclick="selectCoord('alexa',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Alexa Woods</span></div>
+        <div class="row-now green">9</div>
+        <div class="row-plan">3</div>
+        <div class="row-conf">6</div>
+        <div class="row-deliv zero">0</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd">3</div>
+        <div class="row-inc">5</div>
+      </div>
+
+      <div class="coord-row" data-status="green" data-id="habiba" onclick="selectCoord('habiba',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Habiba Eldah</span></div>
+        <div class="row-now green">8</div>
+        <div class="row-plan">2</div>
+        <div class="row-conf">5</div>
+        <div class="row-deliv">1</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd">10</div>
+        <div class="row-inc">7</div>
+      </div>
+
+      <div class="coord-row" data-status="green" data-id="emilie" onclick="selectCoord('emilie',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Emilie Bell-Perrais</span></div>
+        <div class="row-now green">7</div>
+        <div class="row-plan">3</div>
+        <div class="row-conf">2</div>
+        <div class="row-deliv">2</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd">3</div>
+        <div class="row-inc">9</div>
+      </div>
+
+      <div class="coord-row" data-status="green" data-id="jade" onclick="selectCoord('jade',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Jade Perelmuter</span></div>
+        <div class="row-now green">7</div>
+        <div class="row-plan">1</div>
+        <div class="row-conf">2</div>
+        <div class="row-deliv">4</div>
+        <div class="row-flags"><span class="row-flag rf-ds">DS 2</span></div>
+        <div class="row-cfmd">6</div>
+        <div class="row-inc">10</div>
+      </div>
+
+      <div class="coord-row" data-status="green" data-id="viv" onclick="selectCoord('viv',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Viv Holliday</span></div>
+        <div class="row-now green">3</div>
+        <div class="row-plan">1</div>
+        <div class="row-conf">2</div>
+        <div class="row-deliv zero">0</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd zero">0</div>
+        <div class="row-inc">3</div>
+      </div>
+
+      <div class="coord-row" data-status="green" data-id="hannah" onclick="selectCoord('hannah',this)">
+        <div class="row-name"><span class="row-dot" style="background:#09ab3b"></span><span class="row-name-text">Hannah Lind</span></div>
+        <div class="row-now green">1</div>
+        <div class="row-plan">1</div>
+        <div class="row-conf zero">0</div>
+        <div class="row-deliv zero">0</div>
+        <div class="row-flags"></div>
+        <div class="row-cfmd zero">0</div>
+        <div class="row-inc zero">0</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel" id="sidePanel">
+    <div class="side-empty" id="sideEmpty">
+      <div class="side-empty-icon">←</div>
+      <div class="side-empty-text">Select a coordinator to see detail</div>
+    </div>
+    <div class="side-content" id="sideContent">
+      <!-- card injected here by JS -->
+    </div>
+  </div>
+
+</div>
+
+<!-- SETTINGS OVERLAY -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOnBackdrop(event)">
+  <div class="settings-panel">
+    <div class="settings-title">⚙ Thresholds</div>
+
+    <div class="settings-section-label">Status — Now total (Planning + Confirming + Delivery)</div>
+    <div class="thresh-grid">
+      <div class="thresh-row">
+        <div class="thresh-label"><strong style="color:#09ab3b">🟢 OK</strong>Now total ≤</div>
+        <input class="thresh-input" id="t-ok" value="10" type="number" min="1" max="30" onchange="updateThresholds()">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong style="color:#ffa421">🟡 Watch</strong>Now total between OK+1 and</div>
+        <input class="thresh-input" id="t-watch" value="15" type="number" min="1" max="30" onchange="updateThresholds()">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong style="color:#ff4b4b">🔴 At Capacity</strong>Now total ≥ Watch+1</div>
+        <input class="thresh-input" id="t-cap" value="16" type="number" min="1" max="40" disabled style="opacity:0.5">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong style="color:#e91e8c">Modifier — bump up if</strong>Delivery ≥</div>
+        <input class="thresh-input" id="t-mod-d" value="8" type="number" min="1" max="20" onchange="updateThresholds()">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong style="color:#e91e8c">Modifier — bump up if</strong>Planning ≥</div>
+        <input class="thresh-input" id="t-mod-p" value="8" type="number" min="1" max="20" onchange="updateThresholds()">
+      </div>
+    </div>
+
+    <div class="settings-section-label">Stalled</div>
+    <div class="thresh-grid">
+      <div class="thresh-row">
+        <div class="thresh-label"><strong>Trip Build</strong>days in sub-phase &gt;</div>
+        <input class="thresh-input" id="t-build" value="14" type="number" min="1" max="60" onchange="updateThresholds()">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong>Trip Tune</strong>days in sub-phase &gt;</div>
+        <input class="thresh-input" id="t-tune" value="7" type="number" min="1" max="30" onchange="updateThresholds()">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong>Piglet Prep</strong>travel ≤ days AND no ship date</div>
+        <input class="thresh-input" id="t-piglet" value="21" type="number" min="1" max="60" onchange="updateThresholds()">
+      </div>
+      <div class="thresh-row">
+        <div class="thresh-label"><strong>Pre-Trip</strong>travel ≤ days</div>
+        <input class="thresh-input" id="t-pretrip" value="7" type="number" min="1" max="21" onchange="updateThresholds()">
+      </div>
+    </div>
+
+    <button class="settings-close" onclick="toggleSettings()">Done</button>
+  </div>
+</div>
+
+<!-- CARD TEMPLATES DATA -->
+<script>
+const CARDS = {
+  katrina: {
+    name: "Katrina Lee", status: "red", dotColor: "#ff4b4b",
+    planners: [{n:'Meredith',a:9,p:16},{n:'Luisa',a:8,p:10},{n:'Clair',a:7,p:10}],
+    stepins: [],
+    total: 24, planning: 10, confirming: 14, delivery: 0, confirmed: 0, incoming: 0,
+    delsoon: 0, stalled: 0, modifier: "Planning ≥ 8 — bumps status to At Capacity",
+    spark: [20,100,80,70,85,75,60,90,40,20,15,10],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:42, confPct:58, delivPct:0, cfmdPct:0
+  },
+  partow: {
+    name: "Partow Etemadi", status: "red", dotColor: "#ff4b4b",
+    planners: [{n:'Anton',a:18,p:28},{n:'Clair',a:3,p:3},{n:'Tyler',a:3,p:3}],
+    stepins: [],
+    total: 26, planning: 5, confirming: 11, delivery: 6, confirmed: 4, incoming: 11,
+    delsoon: 3, stalled: 1, modifier: null,
+    spark: [15,95,75,65,80,100,55,85,35,18,12,8],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:19, confPct:42, delivPct:23, cfmdPct:16
+  },
+  evan: {
+    name: "Evan LaRocque", status: "red", dotColor: "#ff4b4b",
+    planners: [{n:'Jacoline',a:25,p:35}],
+    stepins: [],
+    total: 26, planning: 8, confirming: 12, delivery: 2, confirmed: 4, incoming: 9,
+    delsoon: 2, stalled: 0, modifier: "Planning ≥ 8 — bumps status to At Capacity",
+    spark: [18,90,72,68,82,98,50,88,38,15,10,7],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:31, confPct:46, delivPct:8, cfmdPct:15
+  },
+  lucia: {
+    name: "Lucia Duarte", status: "red", dotColor: "#ff4b4b",
+    planners: [{n:'Lais',a:9,p:15},{n:'Goa',a:8,p:2},{n:'Anton',a:3,p:4},{n:'Irene',a:3,p:5}],
+    stepins: [],
+    total: 22, planning: 5, confirming: 4, delivery: 10, confirmed: 3, incoming: 7,
+    delsoon: 4, stalled: 0, modifier: "Delivery ≥ 8 — bumps status to At Capacity",
+    spark: [10,88,65,58,78,92,48,82,30,12,8,5],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:23, confPct:18, delivPct:45, cfmdPct:14
+  },
+  madie: {
+    name: "Madeleine Agapito", status: "red", dotColor: "#ff4b4b",
+    planners: [{n:'Alex',a:16,p:35},{n:'Dan',a:9,p:35}],
+    stepins: [],
+    total: 25, planning: 3, confirming: 3, delivery: 12, confirmed: 7, incoming: 3,
+    delsoon: 5, stalled: 1, modifier: "Delivery ≥ 8 — bumps status to At Capacity",
+    spark: [12,85,62,55,75,88,45,100,32,14,9,6],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:12, confPct:12, delivPct:48, cfmdPct:28
+  },
+  juliet: {
+    name: "Juliet Cameron", status: "red", dotColor: "#ff4b4b",
+    planners: [{n:'Sebastian',a:10,p:17},{n:'Claudia',a:9,p:8},{n:'Irene',a:1,p:null}],
+    stepins: [],
+    total: 20, planning: 5, confirming: 10, delivery: 1, confirmed: 4, incoming: 6,
+    delsoon: 1, stalled: 0, modifier: null,
+    spark: [10,78,60,52,72,85,42,92,28,11,7,4],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:25, confPct:50, delivPct:5, cfmdPct:20
+  },
+  jocelyn: {
+    name: "Jocelyn Faulkner", status: "amber", dotColor: "#ffa421",
+    planners: [{n:'Yvonne',a:19,p:25},{n:'Dan',a:17,p:15}],
+    stepins: [],
+    total: 36, planning: 5, confirming: 4, delivery: 6, confirmed: 21, incoming: 1,
+    delsoon: 3, stalled: 0, modifier: null,
+    spark: [8,62,50,45,65,72,38,85,25,10,6,3],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:14, confPct:11, delivPct:17, cfmdPct:58
+  },
+  manroop: {
+    name: "Manroop Sidhu", status: "amber", dotColor: "#ffa421",
+    planners: [{n:'Sebastian',a:8,p:20},{n:'Irene',a:4,p:20}],
+    stepins: [],
+    total: 12, planning: 2, confirming: 7, delivery: 3, confirmed: 0, incoming: 7,
+    delsoon: 2, stalled: 0, modifier: null,
+    spark: [6,55,42,38,58,68,32,78,20,8,5,3],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:17, confPct:58, delivPct:25, cfmdPct:0
+  },
+  sydney: {
+    name: "Sydney Preston", status: "green", dotColor: "#09ab3b",
+    planners: [{n:'Clair',a:5,p:15},{n:'Meredith',a:4,p:6},{n:'Luisa',a:2,p:12},{n:'Irene',a:1,p:null}],
+    stepins: [],
+    total: 12, planning: 4, confirming: 6, delivery: 0, confirmed: 2, incoming: 3,
+    delsoon: 0, stalled: 0, modifier: null,
+    spark: [5,38,32,28,45,55,25,65,18,6,4,2],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:33, confPct:50, delivPct:0, cfmdPct:17
+  },
+  alexa: {
+    name: "Alexa Woods", status: "green", dotColor: "#09ab3b",
+    planners: [{n:'Amy',a:6,p:19},{n:'Michael',a:6,p:13}],
+    stepins: [],
+    total: 12, planning: 3, confirming: 6, delivery: 0, confirmed: 3, incoming: 5,
+    delsoon: 0, stalled: 0, modifier: null,
+    spark: [4,35,30,25,42,52,22,60,15,5,3,2],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:25, confPct:50, delivPct:0, cfmdPct:25
+  },
+  habiba: {
+    name: "Habiba Eldah", status: "green", dotColor: "#09ab3b",
+    planners: [{n:'Claudia',a:14,p:28},{n:'Luisa',a:4,p:10}],
+    stepins: [],
+    total: 18, planning: 2, confirming: 5, delivery: 1, confirmed: 10, incoming: 7,
+    delsoon: 0, stalled: 0, modifier: null,
+    spark: [3,35,30,28,50,60,30,72,22,8,5,3],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:11, confPct:28, delivPct:5, cfmdPct:56
+  },
+  emilie: {
+    name: "Emilie Bell-Perrais", status: "green", dotColor: "#09ab3b",
+    planners: [{n:'Alex',a:5,p:null},{n:'Michael',a:5,p:15}],
+    stepins: [],
+    total: 10, planning: 3, confirming: 2, delivery: 2, confirmed: 3, incoming: 9,
+    delsoon: 0, stalled: 0, modifier: null,
+    spark: [3,30,25,22,38,48,20,55,12,4,3,2],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:30, confPct:20, delivPct:20, cfmdPct:30
+  },
+  jade: {
+    name: "Jade Perelmuter", status: "green", dotColor: "#09ab3b",
+    planners: [{n:'Tyler',a:14,p:14},{n:'Goa',a:1,p:6}],
+    stepins: [],
+    total: 13, planning: 1, confirming: 2, delivery: 4, confirmed: 6, incoming: 10,
+    delsoon: 2, stalled: 0, modifier: null,
+    spark: [2,28,22,20,35,45,18,52,10,3,2,1],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:8, confPct:15, delivPct:31, cfmdPct:46
+  },
+  viv: {
+    name: "Viv Holliday", status: "green", dotColor: "#09ab3b",
+    planners: [{n:'Jack',a:2,p:5},{n:'Amy',a:1,p:null},{n:'Anton',a:1,p:null}],
+    stepins: [],
+    total: 3, planning: 1, confirming: 2, delivery: 0, confirmed: 0, incoming: 3,
+    delsoon: 0, stalled: 0, modifier: null,
+    spark: [2,22,18,15,28,38,15,42,8,2,1,1],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:33, confPct:67, delivPct:0, cfmdPct:0
+  },
+  hannah: {
+    name: "Hannah Lind", status: "green", dotColor: "#09ab3b",
+    planners: [],
+    stepins: [],
+    total: 1, planning: 1, confirming: 0, delivery: 0, confirmed: 0, incoming: 0,
+    delsoon: 0, stalled: 0, modifier: null,
+    spark: [1,15,12,10,20,28,10,32,5,1,1,0],
+    sparkNow: 1, sparkMonth: "Feb",
+    planPct:100, confPct:0, delivPct:0, cfmdPct:0
+  }
+};
+
+let selectedId = null;
+let currentFilter = 'all';
+let openList = null;
+
+function selectCoord(id, rowEl) {
+  // deselect previous
+  document.querySelectorAll('.coord-row').forEach(r => r.classList.remove('selected'));
+  if (selectedId === id) {
+    selectedId = null;
+    document.getElementById('sideEmpty').style.display = 'flex';
+    document.getElementById('sideContent').classList.remove('visible');
+    document.getElementById('listPanel').classList.remove('narrow');
+    return;
+  }
+  rowEl.classList.add('selected');
+  selectedId = id;
+  openList = null;
+  document.getElementById('listPanel').classList.add('narrow');
+  renderCard(id);
+}
+
+function renderCard(id) {
+  const d = CARDS[id];
+  const sc = document.getElementById('sideContent');
+  document.getElementById('sideEmpty').style.display = 'none';
+
+  const statusColors = {red:'#ff4b4b', amber:'#ffa421', green:'#09ab3b'};
+  const statusLabels = {red:'🔴 At Capacity', amber:'🟡 Watch', green:'🟢 OK'};
+
+  const plannerChips = d.planners.map(p => {
+    const projPart = p.p !== null
+      ? `<span class="p-sep">/</span><span class="p-proj">${p.p}</span>`
+      : `<span class="p-sep" style="opacity:0.4">/—</span>`;
+    return `<div class="planner-chip" title="${p.n}: ${p.a} trips entered Planning+ (operated if closed) / ${p.p !== null ? p.p + ' projected 2026' : 'no projection'}">
+      <span class="p-name">${p.n}</span><span class="p-actual">${p.a}</span>${projPart}
+    </div>`;
+  }).join('');
+
+  const stepinChips = d.stepins.length ? `
+    <div class="planner-row-label" style="margin-top:4px">Step-ins</div>
+    <div class="planner-chips">${d.stepins.map(s => `<div class="planner-chip stepin"><span class="p-name">${s.n}</span><span class="p-actual">${s.a}</span></div>`).join('')}</div>
+  ` : '';
+
+  const modifierHtml = d.modifier ? `<div class="modifier-flag show">⚠ ${d.modifier}</div>` : '';
+
+  const sparkBars = d.spark.map((h, i) => {
+    const isNow = i === d.sparkNow;
+    const col = h > 75 ? '#ff4b4b' : h > 50 ? '#ffa421' : '#e6e9ef';
+    return `<div class="sp${isNow ? ' now' : ''}" style="height:${h}%;background:${isNow ? statusColors[d.status] : col}"></div>`;
+  }).join('');
+
+  const legendItems = [
+    d.planPct  ? `<div class="leg-item"><div class="leg-dot" style="background:#4c9be8"></div>Planning ${d.planning}</div>` : '',
+    d.confPct  ? `<div class="leg-item"><div class="leg-dot" style="background:#0068c9"></div>Confirming ${d.confirming}</div>` : '',
+    d.delivPct ? `<div class="leg-item"><div class="leg-dot" style="background:#e91e8c"></div>Delivery ${d.delivery}</div>` : '',
+    d.cfmdPct  ? `<div class="leg-item"><div class="leg-dot" style="background:#d0d4dc"></div>Confirmed ${d.confirmed}</div>` : '',
+  ].join('');
+
+  sc.innerHTML = `
+    <div class="coord-card ${d.status}">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="card-name">
+            <span class="status-dot" style="background:${statusColors[d.status]}"></span>${d.name}
+          </div>
+          <div class="planner-section">
+            <div class="planner-row-label" title="actual trips entered Planning+ (operated only if closed) / projected 2026 total">Roster · actual / projected</div>
+            <div class="planner-chips">${plannerChips}</div>
+            ${stepinChips}
+          </div>
+        </div>
+        <div class="card-right">
+          <div class="total-num">${d.total}</div>
+          <div class="total-label">active trips</div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="section-row">
+          <span class="section-label">Now</span>
+          <span class="section-desc">Planning · Confirming · Delivery</span>
+        </div>
+        <div class="now-cols">
+          <div class="now-col">
+            <div class="now-col-label">Planning</div>
+            <div class="now-val planning${d.planning===0?' zero':''}" onclick="toggleTripList('planning')">${d.planning}</div>
+            <div class="now-col-sub">Trip Build<br>Trip Tune</div>
+          </div>
+          <div class="now-col">
+            <div class="now-col-label">Confirming</div>
+            <div class="now-val confirming${d.confirming===0?' zero':''}" onclick="toggleTripList('confirming')">${d.confirming}</div>
+            <div class="now-col-sub">Invoiced<br>Booked</div>
+          </div>
+          <div class="now-col">
+            <div class="now-col-label">Delivery</div>
+            <div class="now-val delivery${d.delivery===0?' zero':''}" onclick="toggleTripList('delivery')">${d.delivery}</div>
+            <div class="now-col-sub">Piglet · Pre-Trip<br>On Trip</div>
+          </div>
+        </div>
+
+        <div class="confirmed-row">
+          <div class="confirmed-left">
+            <div class="confirmed-label">Confirmed</div>
+            <div class="confirmed-sub">&gt;90 · 90 · 60 Days — booked &amp; paid, waiting for travel</div>
+          </div>
+          <div class="confirmed-val${d.confirmed===0?' zero':''}" onclick="toggleTripList('confirmed')">${d.confirmed}</div>
+        </div>
+
+        ${modifierHtml}
+
+        <div class="flags-row">
+          <div class="flag-chip del-soon${d.delsoon===0?' zero-flag':d.delsoon>=3?' hot':''}" onclick="${d.delsoon>0?"toggleTripList('delsoon')":"''"}">
+            <div class="flag-left"><div class="flag-name">Delivery Soon</div><div class="flag-sub">travel 45–60 days · any phase</div></div>
+            <div class="flag-val">${d.delsoon}</div>
+          </div>
+          <div class="flag-chip stalled${d.stalled===0?' zero-flag':d.stalled>=2?' hot':''}" onclick="${d.stalled>0?"toggleTripList('stalled')":"''"}">
+            <div class="flag-left"><div class="flag-name">Stalled</div><div class="flag-sub">over phase threshold</div></div>
+            <div class="flag-val">${d.stalled}</div>
+          </div>
+        </div>
+
+        <div class="incoming-row">
+          <div class="incoming-left">
+            <div class="incoming-label">Incoming</div>
+            <div class="incoming-sub">Talking phase trips heading to this desk</div>
+          </div>
+          <div class="incoming-val${d.incoming===0?' zero':''}" onclick="${d.incoming>0?"toggleTripList('incoming')":"''"}">${d.incoming}</div>
+        </div>
+
+        <div class="stack-wrap">
+          <div class="stack-bar">
+            ${d.planPct  ? `<div class="stack-seg" style="width:${d.planPct}%;background:#4c9be8"></div>` : ''}
+            ${d.confPct  ? `<div class="stack-seg" style="width:${d.confPct}%;background:#0068c9"></div>` : ''}
+            ${d.delivPct ? `<div class="stack-seg" style="width:${d.delivPct}%;background:#e91e8c"></div>` : ''}
+            ${d.cfmdPct  ? `<div class="stack-seg" style="width:${d.cfmdPct}%;background:#d0d4dc"></div>` : ''}
+          </div>
+          <div class="stack-legend">${legendItems}</div>
+        </div>
+
+        <div class="spark-wrap">
+          <div class="spark-row">
+            <span class="spark-lbl">Year</span>
+            <div class="sparkline">${sparkBars}</div>
+            <span class="spark-now-lbl">${d.sparkMonth} ↑</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="trip-list" id="card-trip-list">
+        <div id="tl-placeholder" style="padding:12px 16px;font-size:11px;color:#8a8e9b;font-style:italic">
+          Click any number above to see the trip list.
+        </div>
+      </div>
+    </div>
+  `;
+
+  sc.classList.add('visible');
+}
+
+function toggleTripList(group) {
+  const listEl = document.getElementById('card-trip-list');
+  if (!listEl) return;
+  if (openList === group) {
+    listEl.classList.remove('open');
+    openList = null;
+    return;
+  }
+  const d = CARDS[selectedId];
+  const count = {
+    planning: d.planning, confirming: d.confirming, delivery: d.delivery,
+    confirmed: d.confirmed, delsoon: d.delsoon, stalled: d.stalled, incoming: d.incoming
+  }[group];
+  if (!count) return;
+
+  const colors = {
+    planning:'#4c9be8', confirming:'#0068c9', delivery:'#e91e8c',
+    confirmed:'#8a8e9b', delsoon:'#ffa421', stalled:'#ff4b4b', incoming:'#83c9ff'
+  };
+  const labels = {
+    planning:`Planning — ${count} trips · longest in phase first`,
+    confirming:`Confirming — ${count} trips · soonest travel first`,
+    delivery:`Delivery — ${count} trips · soonest travel first`,
+    confirmed:`Confirmed — ${count} trips · soonest travel first`,
+    delsoon:`Delivery Soon — ${count} trips · travel 45–60 days · any phase`,
+    stalled:`Stalled — ${count} trips`,
+    incoming:`Incoming — ${count} Talking trips · closest to OINQ first`
+  };
+
+  listEl.innerHTML = `
+    <div class="tl-header">
+      <span class="tl-title" style="color:${colors[group]}">${labels[group]}</span>
+      <span class="tl-close" onclick="toggleTripList('${group}')">✕</span>
+    </div>
+    <div style="padding:10px 16px 12px;font-size:11px;color:#8a8e9b;font-style:italic">
+      Trip-level data will populate from FMP export. Sorted as shown above.
+    </div>
+  `;
+  listEl.classList.add('open');
+  openList = group;
+}
+
+function setFilter(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+
+  document.querySelectorAll('.coord-row').forEach(row => {
+    if (filter === 'all' || row.dataset.status === filter) {
+      row.classList.remove('hidden');
+    } else {
+      row.classList.add('hidden');
+    }
+  });
+
+  document.querySelectorAll('.group-header').forEach(gh => {
+    if (filter === 'all' || gh.dataset.group === filter) {
+      gh.style.display = '';
+    } else {
+      gh.style.display = 'none';
+    }
+  });
+}
+
+function toggleSettings() {
+  document.getElementById('settingsOverlay').classList.toggle('show');
+}
+function closeSettingsOnBackdrop(e) {
+  if (e.target === document.getElementById('settingsOverlay')) toggleSettings();
+}
+function updateThresholds() {
+  const watch = parseInt(document.getElementById('t-watch').value) || 15;
+  document.getElementById('t-cap').value = watch + 1;
+}
+</script>
+</body>
+</html>
