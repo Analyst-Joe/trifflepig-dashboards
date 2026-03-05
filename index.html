@@ -68,7 +68,7 @@
     padding: 10px 20px 8px;
     border-bottom: 1px solid #f0f2f6;
     display: grid;
-    grid-template-columns: 180px 60px 60px 60px 60px 70px 60px 60px;
+    grid-template-columns: minmax(120px,1.8fr) 48px 48px 56px 48px 80px 56px 64px;
     gap: 4px; align-items: center;
     font-size: 9px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.07em; color: #bbb;
@@ -100,7 +100,7 @@
   /* COORDINATOR ROW */
   .coord-row {
     display: grid;
-    grid-template-columns: 180px 60px 60px 60px 60px 70px 60px 60px;
+    grid-template-columns: minmax(120px,1.8fr) 48px 48px 56px 48px 80px 56px 64px;
     gap: 4px; align-items: center;
     padding: 9px 20px;
     border-bottom: 1px solid #f8f9fa;
@@ -162,7 +162,7 @@
   .side-empty-icon { font-size: 32px; }
   .side-empty-text { font-size: 12px; }
 
-  .side-content { padding: 20px; display: none; flex-direction: column; gap: 0; }
+  .side-content { padding: 16px; display: none; flex-direction: column; gap: 0; }
   .side-content.visible { display: flex; }
 
   /* ── CARD (inside side panel) ── */
@@ -170,7 +170,7 @@
     background: #fff; border: 1px solid #e6e9ef;
     border-radius: 10px; border-left: 5px solid #e6e9ef;
     box-shadow: 0 2px 14px rgba(0,0,0,0.06);
-    overflow: hidden;
+    overflow: hidden; width: 100%;
   }
   .coord-card.red   { border-left-color: #ff4b4b; }
   .coord-card.amber { border-left-color: #ffa421; }
